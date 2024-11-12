@@ -1,0 +1,172 @@
+Project Plan: NODUS
+Project Objective
+
+The goal is to build a decentralized, secure messaging platform where users can communicate anonymously, send ephemeral messages, and incentivize node participation. The project will have two primary phases:
+
+    Phase 1: Establish core messaging features, including identity management, message fragmentation, storage, retrieval, ephemeral messaging, and optional indirect IP communication.
+    Phase 2: Introduce an incentive model with token-based rewards, TTL extension options, and a system to manage tokens based on successful message delivery.
+
+Core Components and Functions in Phase 1
+
+    Decentralized Identity Management (Username-to-Public Key Mapping)
+    Message Structure and Encryption
+    Message Fragmentation and Distributed Storage
+    Ephemeral Messaging with Expiration
+    Notification System for Offline Delivery
+    Presence Awareness and Real-Time Delivery (Including Indirect IP Communication)
+
+Each component has a specific role in ensuring security, privacy, and message delivery resilience. Here’s a breakdown of each part, with details on how ephemeral messaging and indirect IP communication will function.
+1. Decentralized Identity Management (Username-to-Public Key Mapping)
+
+Objective: Map unique usernames to public keys in a decentralized, immutable manner, ensuring that users can send encrypted messages securely.
+
+    DHT-Based Registration:
+        A DHT stores mappings of usernames to public keys. Users register by signing their username entry with their private key, proving ownership.
+        Registration entries are immutable but support versioning. A user can update their public key with a new timestamped entry.
+
+    Preparation for Phase 2 Incentives:
+        Although tokens are not used in phase 1, the username registration system lays the groundwork for phase 2 by introducing optional registration costs or micro-fees to prevent spam or abuse.
+
+2. Message Structure and Encryption
+
+Objective: Encrypt messages to ensure that only the intended recipient can decrypt and read them.
+
+    Message Structure:
+        Header: Contains metadata such as the sender’s username, timestamp, message ID, and encryption algorithm identifier.
+        Body: Contains the actual message content.
+
+    Encryption Process:
+        The sender retrieves the recipient’s public key from the DHT and encrypts the message (header + body).
+        The encrypted message is then fragmented and distributed across the network for storage.
+
+3. Message Fragmentation and Distributed Storage
+
+Objective: Split encrypted messages into fragments, distribute them across multiple nodes, and enable ephemeral storage with configurable expiration.
+
+    Fragmentation:
+        Encrypted messages are split into multiple fragments, each with a unique identifier (fragment ID).
+        The number of fragments is configurable, based on message size and network conditions. These fragments may be done with erasure coding. With data fragments and parity fragments.
+
+    Distributed Storage via DHT:
+        Each fragment is stored across multiple nodes based on hash-based distribution. Redundancy ensures availability even if some nodes go offline.
+
+    Ephemeral Storage:
+        Fragments have a default expiration (e.g., 24 hours). After this period, nodes delete the fragments to free up resources.
+
+4. Ephemeral Messaging with Expiration
+
+Objective: Ensure messages have a limited lifespan, providing users with ephemeral messaging options.
+
+    Message Expiration:
+        Messages are ephemeral by default, with a set expiration after which fragments are automatically removed from storage nodes.
+        Fragments and notifications have a time-to-live (TTL) parameter, ensuring temporary storage.
+
+    Temporary Storage and Cleanup:
+        Nodes periodically check for expired fragments, deleting those that have exceeded their TTL. This maintains storage efficiency and supports ephemeral messaging.
+
+5. Notification System for Offline Delivery
+
+Objective: Enable offline recipients to retrieve messages by storing notifications in the DHT.
+
+    Notification Creation:
+        When the recipient is offline, the sender creates a notification entry in the DHT containing metadata about the message and fragments.
+        The notification includes:
+            Message ID: Unique identifier for the message.
+            Fragment Count: Number of fragments to retrieve.
+            Fragment Locations: DHT keys or addresses for locating fragments.
+
+    Offline Retrieval:
+        When the recipient comes online, they query the DHT for notifications, retrieve fragments, and reconstruct the message.
+
+6. Presence Awareness and Real-Time Delivery (Including Indirect IP Communication)
+
+Objective: Support direct message delivery when recipients are online, with options for indirect IP communication to preserve privacy.
+
+    Presence Tracking:
+        Nodes use a lightweight gossip protocol to announce presence to neighboring nodes, allowing real-time delivery if both sender and receiver are online.
+
+    Direct Delivery:
+        If the recipient is online, the sender delivers fragments directly, bypassing the DHT storage and notification creation.
+
+    Indirect IP Communication Options:
+        To avoid direct IP exposure, users may set a pseudo-offline mode, which prevents direct connections by masking their online presence.
+        In pseudo-offline mode:
+            Users disable presence announcements and avoid direct IP-based communication.
+            Messages are relayed through intermediary nodes, providing a layer of anonymity and ensuring IP privacy.
+        Notification Caching for Efficient Retrieval:
+            To avoid frequent DHT lookups, notifications are cached on a subset of nodes. This allows pseudo-offline recipients to quickly check for messages without constantly querying the DHT.
+
+Phase 2: Token-Based Incentive System and Node Behavior Tracking
+
+In phase 2, we introduce a token-based incentive system that rewards nodes for storing and relaying messages, with additional options to extend TTL for stored fragments. This phase also includes mechanisms to manage tokens based on message delivery success, preventing abuse.
+Key Additions in Phase 2
+
+    Token-Based High-Availability Messaging with TTL Extension:
+        Users can attach tokens to high-availability messages, incentivizing nodes to store them for longer.
+        Each fragment carries a portion of the total tokens, which are unlocked only upon successful message delivery.
+
+    TTL Extension with Tokens:
+        Users can extend TTL by attaching tokens to the message ID. Nodes holding fragments of this message ID can claim tokens to extend the TTL.
+        Efficiency Check: If a fragment has expired or was sent, nodes receive tokens only upon confirmation. If a fragment was already passed on, no tokens are issued.
+
+    Abuse Prevention and Token Unlocking Conditions:
+        Tokens are unlocked only when message fragments are successfully delivered. This discourages abuse where nodes might pass fragments back and forth to unlock tokens without delivering.
+        Graceful Shutdown Incentives:
+            If a node goes offline, it can pass fragments to neighboring nodes. Nodes performing graceful shutdowns receive partial tokens for responsible handoff.
+            Abrupt disconnections (e.g., due to power outages) do not penalize the node but result in delayed token rewards until reconnected.
+
+    Node Rating System:
+        Nodes are rated based on reliability, uptime, and responsible behavior (e.g., graceful shutdowns, consistent fragment storage).
+        Ratings are stored in the DHT and updated periodically, allowing for transparent and fair node reputation tracking.
+
+    Ledger and Transaction Transparency:
+        All token transactions, TTL extensions, and storage behaviors are recorded on a distributed ledger, ensuring transparency.
+        This ledger provides a verifiable history of interactions, preventing disputes and ensuring fairness.
+
+Workflow Summary for Phase 1 and Phase 2
+
+    Registration:
+        User B registers a username and public key in the DHT, optionally paying a small fee in phase 2 to prevent spam.
+
+    Sending a Message:
+        User A retrieves B’s public key, encrypts the message, and fragments it.
+        A stores fragments in the DHT with an initial TTL.
+
+    Notification and Retrieval:
+        If B is offline, A creates a notification. When B is online, they query the DHT for notifications and retrieve fragments.
+        If B is in pseudo-offline mode, they check cached notifications without revealing their IP address.
+
+    Phase 2 Enhancements:
+        High Availability: A attaches tokens to fragments, incentivizing nodes to retain them for longer periods.
+        TTL Extension: A can extend TTL by adding tokens to the message ID, allowing nodes to claim rewards for prolonged storage.
+        Abuse Prevention: Tokens are only fully unlocked when fragments are confirmed as delivered. Partial rewards may apply for graceful handoffs during shutdowns.
+
+Key Features and Advantages
+
+    Ephemeral and High-Availability Messaging: By default, messages are ephemeral, but phase 2 enables long-term retention with tokens.
+    Privacy-Respecting Indirect Communication: Options for pseudo-offline mode and node-based relays enable private communication without exposing IPs.
+    Self-Sustaining Incentive Model: Tokens reward nodes based on reliable storage and message delivery, sustaining the network and motivating participation.
+    Transparent and Reliable: Ratings and ledger transparency ensure fair treatment for nodes, with incentives for responsible behavior.
+    Scalability and Flexibility: The platform supports various privacy needs, from ephemeral messaging to high-availability, with adjustable TTL for customized storage options.
+
+
+I have this plan with this structure
+
+nodus/
+├── cmd
+│   ├── nodus
+│   ├── nodus-client
+│   └── nodusd
+├── config
+├── dht
+├── identity
+├── incentive
+├── ledger
+├── messaging
+├── notification
+├── presence
+├── README
+├── storage
+└── utils
+
+
